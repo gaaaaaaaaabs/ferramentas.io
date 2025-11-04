@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Templates de Local - JJK RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluindo a fonte Inter (padrão) -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0c0c1a; }
+        /* Estilo para a caixa de código em linha única */
+        #output-code { white-space: nowrap; overflow-x: auto; font-size: 10px; }
+        .tab-content-container { max-height: 400px; overflow-y: auto; }
+        .info-card-input { border-left: 4px solid #9b00ff; }
+    </style>
+    <script>
+        // Variável global para armazenar o ID da aba ativa para o Preview
+        let activeTabId = 'loc-tab-1';
+
+        // Estrutura de dados para o gerador
+        const data = {
+            main: {
+                title: 'Novo Local',
+                bannerUrl: 'https://i.imgur.com/KB5MIUV.png', // URL de Quioto como padrão
+                cssLink: 'https://gaaaaaaaaabs.github.io/goldenagerepositor.io/locais.css',
+            },
+            tabs: [
+                { title: '1º Ano', description: '', cards: [{}, {}, {}, {}] },
+                { title: '2º Ano', description: '', cards: [{}, {}, {}, {}] },
+                { title: '3º Ano', description: '', cards: [{}, {}, {}, {}] },
+                { title: 'Recursos', description: '', cards: [{}, {}, {}, {}] }
+            ]
+        };
+
+        // --- Funções de Ajuda ---
+
+        // Minifica o HTML removendo quebras de linha e espaços desnecessários
+        function minifyHTML(html) {
+            return html
+                .replace(/\s+/g, ' ') // Substitui múltiplas quebras de linha/espaços por um único espaço
+                .replace(/ >/g, '>')  // Remove espaços antes de >
+                .replace(/ < /g, '<')  // Remove espaços depois de <
+                .trim();
+        }
+
+        // Gera o HTML do card de informação (Info Card)
+        function generateInfoCard(card, index) {
+            if (!card.title) return '';
+            // A ferramenta adiciona o BBCode, o placeholder foi removido
+            const linkTag = card.link ? `[url=${card.link}]${card.title}[/url]` : card.title;
+            return `
+                <div class="info-card">
+                    <div class="info-title">${linkTag}</div>
+                    <div class="info-content">${card.content || ''}</div>
+                </div>
+            `;
+        }
+        
+        // Gera o HTML do painel de uma aba
+        function generateTabPanel(tab, tabIndex) {
+            const tabId = `loc-tab-${tabIndex + 1}`;
+            const paneId = `loc-pane-${tabIndex + 1}`;
+            
+            // Reconstroi os Info Cards
+            const infoCardsHtml = tab.cards.map((card, idx) => generateInfoCard(card, idx)).filter(Boolean).join('');
+
+            // O replace da quebra de linha garante novos parágrafos no fórum
+            const descriptionHtml = tab.description.split('\n').map(p => `<p>${p.trim()}</p>`).join('');
+
+            return `
+                <div class="tab-pane" id="${paneId}">
+                    <div class="loc-content">
+                        ${descriptionHtml}
+                        ${infoCardsHtml ? `<div class="info-grid-2col">${infoCardsHtml}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Função Principal de Geração ---
+        function generateTemplate() {
+            // 1. Capturar o ID da aba ativa ANTES de limpar o preview
+            const checkedInput = document.querySelector('#preview-container input.rpg-tabs-input:checked');
+            if (checkedInput) {
+                activeTabId = checkedInput.id;
+            }
+
+            // 2. Coletar dados da UI
+            data.main.title = document.getElementById('main-title').value;
+            data.main.bannerUrl = document.getElementById('banner-url').value;
+            data.main.cssLink = document.getElementById('css-link').value;
+
+            for (let i = 0; i < 4; i++) {
+                data.tabs[i].title = document.getElementById(`tab-${i}-title`).value;
+                data.tabs[i].description = document.getElementById(`tab-${i}-description`).value;
+
+                for (let j = 0; j < 4; j++) {
+                    data.tabs[i].cards[j].title = document.getElementById(`tab-${i}-card-${j}-title`).value;
+                    data.tabs[i].cards[j].content = document.getElementById(`tab-${i}-card-${j}-content`).value;
+                    data.tabs[i].cards[j].link = document.getElementById(`tab-${i}-card-${j}-link`).value;
+                }
+            }
+
+            // 3. Gerar o HTML
+            const tabNavLabels = data.tabs.map((tab, i) => `<label class="tab-button" for="loc-tab-${i + 1}">${tab.title}</label>`).join('');
+            const tabPanelsHtml = data.tabs.map((tab, i) => generateTabPanel(tab, i)).join('');
+
+            const templateHtml = `
+                <link href="${data.main.cssLink}" rel="stylesheet" type="text/css">
+                <div class="loc-container">
+                    <div class="loc-banner" style="background-image: url('${data.main.bannerUrl}');">
+                        <h2 class="loc-title">${data.main.title}</h2>
+                    </div>
+                    <div class="loc-body">
+                        <div class="rpg-tabs">
+                            <input type="radio" name="loc-tabs" id="loc-tab-1" class="rpg-tabs-input" ${activeTabId === 'loc-tab-1' ? 'checked' : ''}>
+                            <input type="radio" name="loc-tabs" id="loc-tab-2" class="rpg-tabs-input" ${activeTabId === 'loc-tab-2' ? 'checked' : ''}>
+                            <input type="radio" name="loc-tabs" id="loc-tab-3" class="rpg-tabs-input" ${activeTabId === 'loc-tab-3' ? 'checked' : ''}>
+                            <input type="radio" name="loc-tabs" id="loc-tab-4" class="rpg-tabs-input" ${activeTabId === 'loc-tab-4' ? 'checked' : ''}>
+                            <div class="tab-nav">
+                                ${tabNavLabels}
+                            </div>
+                            <div class="tab-pane-wrapper">
+                                ${tabPanelsHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 4. Minificar o HTML
+            const minifiedHtml = minifyHTML(templateHtml);
+
+            // 5. Atualizar UI
+            document.getElementById('output-code').value = minifiedHtml;
+            document.getElementById('preview-container').innerHTML = templateHtml;
+
+            // 6. Configurar listeners de clique nas abas do preview para preservar o estado
+            document.querySelectorAll('#preview-container .rpg-tabs-input').forEach(input => {
+                input.addEventListener('change', (event) => {
+                    if (event.target.checked) {
+                        activeTabId = event.target.id;
+                    }
+                });
+            });
+        }
+
+        // --- Funções de UI ---
+
+        function copyToClipboard() {
+            const output = document.getElementById('output-code');
+            output.select();
+            document.execCommand('copy');
+            const button = document.getElementById('copy-button');
+            button.textContent = 'Copiado!';
+            setTimeout(() => {
+                button.textContent = 'Copiar Código'; // Alterado de 'Copiar Código (Linha Única)'
+            }, 2000);
+        }
+
+        function setupTabSwitching(tabCount) {
+            const tabsContainer = document.getElementById('generator-tabs-container');
+            const tabButtons = tabsContainer.querySelectorAll('button[data-tab]');
+            const tabContents = tabsContainer.querySelectorAll('[data-tab-content]');
+
+            // Define o estado inicial da aba principal (default para tab-0)
+            const initialTab = document.getElementById('tab-0-button');
+            showTabContent('tab-0');
+            initialTab.classList.add('bg-indigo-700', 'text-white');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+
+                    // Remove classes de ativo de todos
+                    tabButtons.forEach(btn => btn.classList.remove('bg-indigo-700', 'text-white'));
+                    tabContents.forEach(content => content.classList.add('hidden'));
+
+                    // Adiciona classe de ativo ao clicado
+                    button.classList.add('bg-indigo-700', 'text-white');
+                    showTabContent(targetTab);
+                });
+            });
+        }
+        
+        function showTabContent(tabId) {
+            document.querySelectorAll('[data-tab-content]').forEach(content => {
+                content.classList.add('hidden');
+            });
+            const content = document.getElementById(tabId + '-content');
+            if (content) {
+                content.classList.remove('hidden');
+            }
+        }
+
+        function createCardInputs(tabIndex) {
+            const container = document.getElementById(`tab-${tabIndex}-cards`);
+            for (let j = 0; j < 4; j++) {
+                container.innerHTML += `
+                    <div class="p-3 bg-gray-700 rounded-lg info-card-input shadow-inner">
+                        <h4 class="font-bold text-sm text-highlight mb-2">Card de Informação ${j + 1}</h4>
+                        <input type="text" id="tab-${tabIndex}-card-${j}-title" placeholder="Título (Ex: Sala de Feitiços)" class="w-full p-2 mb-2 text-sm bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()">
+                        <input type="text" id="tab-${tabIndex}-card-${j}-link" placeholder="Link de destino (Opcional: https://...)" class="w-full p-2 mb-2 text-sm bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()">
+                        <textarea id="tab-${tabIndex}-card-${j}-content" rows="2" placeholder="Conteúdo da descrição do card" class="w-full p-2 text-sm bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()"></textarea>
+                    </div>
+                `;
+            }
+        }
+
+        // Inicialização
+        window.onload = function() {
+            // Inicializa a aba principal
+            setupTabSwitching(5); 
+            
+            // Inicializa os inputs dos cards para todas as 4 abas
+            for (let i = 0; i < 4; i++) {
+                createCardInputs(i);
+            }
+
+            // Preenche valores iniciais e gera o template
+            document.getElementById('main-title').value = data.main.title;
+            document.getElementById('banner-url').value = data.main.bannerUrl;
+            document.getElementById('css-link').value = data.main.cssLink;
+            
+            // Preenche as abas com dados iniciais (Quioto 1º Ano como exemplo)
+            document.getElementById('tab-0-title').value = data.tabs[0].title;
+            document.getElementById('tab-0-description').value = "O currículo em Quioto enfatiza disciplina, tradição e respeito. O foco inicial é o controle estrito da Energia Amaldiçoada e as tradições Jujutsu.";
+            document.getElementById('tab-0-card-0-title').value = "Sala de Feitiços";
+            document.getElementById('tab-0-card-0-content').value = "Controle de Energia Amaldiçoada por meio de posturas e rituais. Foco em estabilidade e não em velocidade.";
+            document.getElementById('tab-0-card-1-title').value = "Estudo de Maldições";
+            document.getElementById('tab-0-card-1-content').value = "Estudo histórico de Maldições lendárias e rituais de purificação de santuários.";
+
+            document.getElementById('tab-1-title').value = data.tabs[1].title;
+            document.getElementById('tab-2-title').value = data.tabs[2].title;
+            document.getElementById('tab-3-title').value = data.tabs[3].title;
+
+            // Chama a geração inicial
+            generateTemplate();
+
+            // Adiciona listeners para atualizar o preview automaticamente ao clicar em uma aba de input
+            document.querySelectorAll('#generator-tabs-container button[data-tab]').forEach(button => {
+                button.addEventListener('click', generateTemplate);
+            });
+        };
+    </script>
+</head>
+<body class="text-white">
+    <div class="max-w-7xl mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-highlight mb-2">Gerador de Templates de Local (JJK)</h1>
+            <p class="text-muted text-sm">Preencha os dados e copie o código HTML final.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Coluna de Input e Configurações -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Configurações Principais -->
+                <div class="bg-panel p-5 rounded-xl shadow-lg border border-gray-700">
+                    <h2 class="text-xl font-bold text-highlight mb-4 border-b border-gray-700 pb-2">Configurações Gerais</h2>
+                    <div class="space-y-4">
+                        <label class="block">Título do Local:</label>
+                        <input type="text" id="main-title" class="w-full p-3 bg-gray-800 border border-gray-700 rounded" oninput="generateTemplate()">
+                        
+                        <label class="block">URL da Imagem do Banner:</label>
+                        <input type="text" id="banner-url" class="w-full p-3 bg-gray-800 border border-gray-700 rounded" oninput="generateTemplate()">
+
+                        <label class="block">Link CSS (Não mude a menos que saiba o que está fazendo):</label>
+                        <input type="text" id="css-link" class="w-full p-3 bg-gray-800 border border-gray-700 rounded text-sm" oninput="generateTemplate()">
+                    </div>
+                </div>
+
+                <!-- Abas de Conteúdo do Template -->
+                <div class="bg-panel p-5 rounded-xl shadow-lg border border-gray-700">
+                    <h2 class="text-xl font-bold text-highlight mb-4 border-b border-gray-700 pb-2">Conteúdo das Abas (Até 4 Abas)</h2>
+                    
+                    <!-- Navegação das Abas de Input -->
+                    <div id="generator-tabs-container">
+                        <div class="flex flex-wrap gap-2 mb-4 p-1 bg-gray-800 rounded-lg">
+                            <button id="tab-0-button" data-tab="tab-0" class="p-2 rounded transition duration-200 text-sm">Aba 1</button>
+                            <button data-tab="tab-1" class="p-2 rounded transition duration-200 text-sm">Aba 2</button>
+                            <button data-tab="tab-2" class="p-2 rounded transition duration-200 text-sm">Aba 3</button>
+                            <button data-tab="tab-3" class="p-2 rounded transition duration-200 text-sm">Aba 4</button>
+                        </div>
+
+                        <!-- Conteúdo da Aba 1 (Padrão: 1º Ano) -->
+                        <div id="tab-0-content" data-tab-content class="space-y-4 tab-content-container">
+                            <h3 class="font-bold text-lg text-highlight">Configuração da Aba 1</h3>
+                            <input type="text" id="tab-0-title" placeholder="Título da Aba (Ex: 1º Ano)" class="w-full p-2 bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()">
+                            <textarea id="tab-0-description" rows="4" placeholder="Descrição Principal da Aba 1 (Use quebras de linha para novos parágrafos)" class="w-full p-2 bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()"></textarea>
+                            <div id="tab-0-cards" class="space-y-3"></div>
+                        </div>
+
+                        <!-- Conteúdo da Aba 2 (Padrão: 2º Ano) -->
+                        <div id="tab-1-content" data-tab-content class="space-y-4 hidden tab-content-container">
+                            <h3 class="font-bold text-lg text-highlight">Configuração da Aba 2</h3>
+                            <input type="text" id="tab-1-title" placeholder="Título da Aba (Ex: 2º Ano)" class="w-full p-2 bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()">
+                            <textarea id="tab-1-description" rows="4" placeholder="Descrição Principal da Aba 2 (Use quebras de linha para novos parágrafos)" class="w-full p-2 bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()"></textarea>
+                            <div id="tab-1-cards" class="space-y-3"></div>
+                        </div>
+
+                        <!-- Conteúdo da Aba 3 (Padrão: 3º Ano) -->
+                        <div id="tab-2-content" data-tab-content class="space-y-4 hidden tab-content-container">
+                            <h3 class="font-bold text-lg text-highlight">Configuração da Aba 3</h3>
+                            <input type="text" id="tab-2-title" placeholder="Título da Aba (Ex: 3º Ano)" class="w-full p-2 bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()">
+                            <textarea id="tab-2-description" rows="4" placeholder="Descrição Principal da Aba 3 (Use quebras de linha para novos parágrafos)" class="w-full p-2 bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()"></textarea>
+                            <div id="tab-2-cards" class="space-y-3"></div>
+                        </div>
+
+                        <!-- Conteúdo da Aba 4 (Padrão: Recursos) -->
+                        <div id="tab-3-content" data-tab-content class="space-y-4 hidden tab-content-container">
+                            <h3 class="font-bold text-lg text-highlight">Configuração da Aba 4</h3>
+                            <input type="text" id="tab-3-title" placeholder="Título da Aba (Ex: Recursos)" class="w-full p-2 bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()">
+                            <textarea id="tab-3-description" rows="4" placeholder="Descrição Principal da Aba 4 (Use quebras de linha para novos parágrafos)" class="w-full p-2 bg-gray-800 border border-gray-600 rounded" oninput="generateTemplate()"></textarea>
+                            <div id="tab-3-cards" class="space-y-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna de Preview e Saída (Ocupa 2/3 da largura) -->
+            <div class="lg:col-span-2 space-y-6"> 
+                
+                <!-- Preview em Tempo Real -->
+                <div class="p-5 bg-panel rounded-xl shadow-lg border border-gray-700">
+                    <h2 class="text-xl font-bold text-highlight mb-4 border-b border-gray-700 pb-2">Preview</h2>
+                    <div id="preview-container" class="bg-gray-900 p-2 rounded-lg" style="max-height: 500px; overflow-y: auto;">
+                        <!-- O template será injetado aqui -->
+                    </div>
+                </div>
+
+                <!-- Saída e Botão Copiar -->
+                <div class="p-5 bg-panel rounded-xl shadow-lg border border-gray-700">
+                    <h2 class="text-xl font-bold text-highlight mb-4 border-b border-gray-700 pb-2">Código Final</h2>
+                    <button id="copy-button" onclick="copyToClipboard()" class="w-full p-3 mb-3 bg-indigo-700 hover:bg-indigo-600 rounded-lg font-bold transition duration-200">
+                        Copiar Código
+                    </button>
+                    <textarea id="output-code" rows="10" readonly class="w-full p-3 bg-gray-800 border border-gray-700 rounded text-muted cursor-copy"></textarea>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
